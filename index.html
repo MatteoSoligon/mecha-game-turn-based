@@ -1,0 +1,601 @@
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+      /* ── Palette ── */
+      :root {
+        --red:    #d24040;
+        --yellow: #fac800;
+        --blue:   #00a0c8;
+        --white:  #f0f0dc;
+        --black:  #101820;
+        --green:  #10c840;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        background: var(--white);
+        color: var(--black);
+        font-family: 'Press Start 2P', monospace;
+        font-size: 8px;
+        padding-bottom: 110px;
+      }
+
+      /* ── Shared panel ── */
+      .panel {
+        background: var(--black);
+        border: 3px solid var(--white);
+        box-shadow: 4px 4px 0 var(--white);
+      }
+
+      /* ── Value bars ── */
+      .value-bar {
+        height: 8px;
+        width: 100%;
+        border: 2px solid var(--black);
+        background: var(--black);
+        overflow: hidden;
+      }
+
+      .value-bar-fill { height: 100%; width: 0; }
+      .value-bar-fill.hp     { background: var(--red); }
+      .value-bar-fill.energy { background: var(--green); }
+
+      /* ── Special stat icons ── */
+      .special-stat-icon {
+        display: inline-flex;
+        align-items: center;
+        border: 2px solid var(--white);
+        padding: 2px;
+        margin-right: 4px;
+        background: var(--white);
+      }
+
+      .passive-effects-workshop { display: flex; flex-wrap: wrap; gap: 6px; }
+      .passive-effects-workshop .special-stat-icon { background: var(--black); cursor: pointer; }
+
+      .attack-icon { border-color: var(--red); }
+      .move-icon   { border-color: var(--yellow); }
+      .parry-icon  { border-color: var(--blue); }
+
+      #robot2-special-stats .special-stat-icon { background: var(--black); border-color: var(--white); }
+
+      /* ── Distance arena ── */
+      #distance-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 120px;
+      }
+
+      #distance-text {
+        display: block;
+        text-align: center;
+        margin-top: 8px;
+        font-size: 7px;
+        color: var(--black);
+        letter-spacing: 1px;
+      }
+
+      .robot-with-stats {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .robot-with-stats img { height: 100px; image-rendering: pixelated; }
+
+      .player-sprite {
+        transition: filter 120ms ease;
+        animation: player-sprite-idle 1200ms ease-in-out infinite;
+      }
+
+      @keyframes player-sprite-idle {
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(-3px); }
+        100% { transform: translateY(0); }
+      }
+
+      .sprite-blink-red  { animation: sprite-blink-red  280ms ease-in-out 2; }
+      .sprite-blink-blue { animation: sprite-blink-blue 280ms ease-in-out 2; }
+
+      @keyframes sprite-blink-red {
+        0%, 100% { mix-blend-mode: normal; filter: none; }
+        50%      { mix-blend-mode: multiply; filter: sepia(1) saturate(7) hue-rotate(-30deg) brightness(0.95); }
+      }
+
+      @keyframes sprite-blink-blue {
+        0%, 100% { mix-blend-mode: normal; filter: none; }
+        50%      { mix-blend-mode: screen; filter: sepia(1) saturate(6) hue-rotate(160deg) brightness(1.05); }
+      }
+
+      /* ── Robot HP/Energy bars (above sprites) ── */
+      .robot-bars {
+        position: absolute;
+        top: -50%;
+        width: 110px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .bar-label {
+        font-size: 6px;
+        text-align: center;
+        color: var(--black);
+        letter-spacing: 1px;
+      }
+
+      /* ── Effect pop ── */
+      .effect-pop {
+        position: absolute;
+        top: 0; left: 50%;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border: 2px solid var(--white);
+        background: var(--white);
+        color: var(--black);
+        font-size: 7px;
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 5;
+        animation: effect-pop 900ms ease-out forwards;
+      }
+
+      .effect-pop.attack-icon { border-color: var(--red);    background: var(--red);    color: var(--white); }
+      .effect-pop.move-icon   { border-color: var(--yellow); background: var(--yellow); color: var(--black); }
+      .effect-pop.parry-icon  { border-color: var(--blue);   background: var(--blue);   color: var(--white); }
+
+      @keyframes effect-pop {
+        0%   { opacity: 0; transform: translate(-50%, 12px) scale(0.8); }
+        20%  { opacity: 1; transform: translate(-50%, -6px) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+      }
+
+      /* ── Floating bar delta ── */
+      .bar-delta {
+        position: fixed;
+        font-size: 8px;
+        font-family: 'Press Start 2P', monospace;
+        pointer-events: none;
+        z-index: 50;
+        transform: translateX(-50%);
+        animation: bar-delta-float 2200ms ease-out forwards;
+      }
+
+      .bar-delta[data-type="hp"]     { color: var(--red); }
+      .bar-delta[data-type="energy"] { color: var(--green); }
+
+      @keyframes bar-delta-float {
+        0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        60%  { opacity: 1; transform: translateX(-50%) translateY(-9px); }
+        100% { opacity: 0; transform: translateX(-50%) translateY(-18px); }
+      }
+
+      /* ── 8-bit robot stat cards ── */
+      .robot-cards {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 14px 0;
+        justify-content: space-between;
+      }
+
+      .robot-card {
+        flex: 1 1 180px;
+        background: var(--black);
+        border: 3px solid;
+        box-shadow: 5px 5px 0 currentColor;
+        overflow: hidden;
+        max-width: 30%;
+      }
+
+      .robot-card--player   { border-color: var(--blue); color: var(--blue); }
+      .robot-card--opponent { border-color: var(--red);  color: var(--red); }
+
+      .robot-card-header {
+        padding: 7px 10px;
+        font-size: 7px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background: currentColor;
+        color: var(--black);
+      }
+
+      .robot-card-body {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+        border-bottom: 1px solid var(--white);
+        opacity: 0.9;
+        padding-bottom: 4px;
+      }
+
+      .stat-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+      .stat-label {
+        color: var(--white);
+        opacity: 0.45;
+        font-size: 6px;
+        flex-shrink: 0;
+        letter-spacing: 1px;
+      }
+
+      .stat-value {
+        color: var(--white);
+        font-size: 7px;
+        text-align: right;
+        word-break: break-all;
+      }
+
+      /* ── Retro monitor ── */
+      #monitor {
+        background: var(--black);
+        border: 3px solid var(--green);
+        box-shadow: 4px 4px 0 var(--green);
+        overflow: hidden;
+        max-width: 520px;
+        margin: 14px 0;
+      }
+
+      #monitor-header {
+        background: var(--green);
+        color: var(--black);
+        font-size: 7px;
+        letter-spacing: 3px;
+        padding: 5px 10px;
+        text-transform: uppercase;
+      }
+
+      #monitor-screen {
+        padding: 10px 14px 8px;
+        min-height: 72px;
+        max-height: 150px;
+        overflow-y: auto;
+        scrollbar-width: none;
+        /* scanline texture */
+        background: repeating-linear-gradient(
+          0deg,
+          transparent, transparent 3px,
+          rgba(16, 24, 32, 0.18) 3px, rgba(16, 24, 32, 0.18) 4px
+        );
+      }
+
+      #monitor-screen::-webkit-scrollbar { display: none; }
+
+      #monitor-log {
+        color: var(--green);
+        font-size: 7px;
+        line-height: 2;
+      }
+
+      .log-line { display: block; }
+      .log-line::before { content: '> '; color: var(--green); opacity: 0.4; }
+
+      .monitor-cursor {
+        color: var(--green);
+        font-size: 8px;
+        animation: cursor-blink 900ms step-end infinite;
+      }
+
+      @keyframes cursor-blink {
+        0%, 100% { opacity: 1; }
+        50%      { opacity: 0; }
+      }
+
+      /* ── Game HUD ── */
+      #game-hud {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        padding: 14px 24px 18px;
+        background: linear-gradient(transparent, var(--black));
+        z-index: 10;
+        gap: 16px;
+      }
+
+      .hud-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      #hud-items { align-items: flex-end; }
+
+      .hud-label {
+        font-size: 6px;
+        letter-spacing: 3px;
+        color: var(--white);
+        opacity: 0.4;
+        text-transform: uppercase;
+      }
+
+      /* ── Action buttons ── */
+      #hud-actions { flex: 0 0 auto; }
+
+      .action-pill {
+        display: flex;
+        border: 3px solid var(--white);
+        box-shadow: 4px 4px 0 var(--white);
+      }
+
+      .action-pill > *:not(:first-child) { border-left: 2px solid var(--black); }
+
+      .action-btn {
+        padding: 10px 18px;
+        border: none;
+        font-size: 7px;
+        font-family: 'Press Start 2P', monospace;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: filter 0.1s;
+      }
+
+      .action-btn:hover:not(:disabled)  { filter: brightness(1.2); }
+      .action-btn:active:not(:disabled) { filter: brightness(0.8); }
+      .action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+      .attack-btn { background: var(--red);    color: var(--white); }
+      .parry-btn  { background: var(--blue);   color: var(--white); }
+
+      .action-move-split { display: flex; }
+      .action-move-split .action-btn              { background: var(--yellow); color: var(--black); padding: 10px 12px; }
+      .action-move-split .action-btn:last-child   { border-left: 2px solid var(--black); }
+
+      /* ── Item buttons ── */
+      .hud-items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-end;
+      }
+
+      .item-btn {
+        background: var(--black);
+        border: 2px solid var(--white);
+        box-shadow: 2px 2px 0 var(--white);
+        color: var(--white);
+        padding: 5px 10px;
+        font-size: 6px;
+        font-family: 'Press Start 2P', monospace;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: filter 0.1s;
+        white-space: nowrap;
+      }
+
+      .item-btn:hover { filter: brightness(1.2); }
+
+      #game-hud .passive-effects-workshop .special-stat-icon {
+        background: var(--white);
+      
+      }
+
+      /* ── Minigame modal ── */
+      .minigame-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(16, 24, 32, 0.88);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+
+      .minigame-modal {
+        background: var(--black);
+        border: 3px solid var(--yellow);
+        box-shadow: 6px 6px 0 var(--yellow);
+        padding: 24px 28px 20px;
+        text-align: center;
+        color: var(--white);
+        font-family: 'Press Start 2P', monospace;
+        min-width: 300px;
+        user-select: none;
+      }
+
+      .minigame-title {
+        margin: 0 0 8px;
+        font-size: 9px;
+        letter-spacing: 3px;
+        color: var(--yellow);
+        text-transform: uppercase;
+      }
+
+      .minigame-subtitle {
+        margin: 0 0 16px;
+        font-size: 7px;
+        color: var(--white);
+        opacity: 0.6;
+      }
+
+      .minigame-canvas { display: block; margin: 0 auto; cursor: pointer; image-rendering: pixelated; }
+
+      .minigame-hint {
+        margin: 10px 0 4px;
+        font-size: 6px;
+        color: var(--white);
+        opacity: 0.4;
+      }
+
+      .minigame-result {
+        margin: 8px 0 0;
+        font-size: 8px;
+        min-height: 1.6em;
+      }
+
+      .minigame-result[data-outcome="hit"]     { color: var(--green); }
+      .minigame-result[data-outcome="partial"] { color: var(--yellow); }
+      .minigame-result[data-outcome="miss"]    { color: var(--red); }
+    </style>
+  </head>
+  <body>
+    <div>
+      <!-- Hidden: app.js reads these; the HUD buttons drive them -->
+      <label for="robot1-action" hidden>Robot 1 Action:</label>
+      <select id="robot1-action" hidden>
+        <option value="attack">attack</option>
+        <option value="parry">parry</option>
+        <option value="get close">get close</option>
+        <option value="go away">go away</option>
+      </select>
+      <button id="fight-btn" type="button" hidden>Fight</button>
+      <p id="round-result" hidden>Ready for battle.</p>
+      <div id="monitor">
+        <div id="monitor-header">&#9646; Battle Log</div>
+        <div id="monitor-screen">
+          <div id="monitor-log">
+            <span class="log-line">System ready. Choose your action.</span>
+          </div>
+          <span class="monitor-cursor">&#9608;</span>
+        </div>
+      </div>
+
+      <div class="robot-cards">
+        <div class="robot-card robot-card--player">
+          <div class="robot-card-header">&#9654; Player</div>
+          <div class="robot-card-body">
+            <div class="stat-row"><span class="stat-label">Parts</span><span class="stat-value" id="robot1-parts"></span></div>
+            <div class="stat-row"><span class="stat-label">Effic.</span><span class="stat-value" id="robot1-efficiency"></span></div>
+            <div class="stat-row"><span class="stat-label">FX</span><span id="robot1-special-stats"></span></div>
+            <div class="stat-row"><span class="stat-label">ATK</span><span class="stat-value" id="robot1-attack-strength"></span></div>
+            <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value" id="robot1-parry-strength"></span></div>
+            <div class="stat-row"><span class="stat-label">SPD</span><span class="stat-value" id="robot1-move-speed"></span></div>
+          </div>
+        </div>
+
+        <div class="robot-card robot-card--opponent">
+          <div class="robot-card-header">&#9664; Enemy</div>
+          <div class="robot-card-body">
+            <div class="stat-row"><span class="stat-label">Parts</span><span class="stat-value" id="robot2-parts"></span></div>
+            <div class="stat-row"><span class="stat-label">Effic.</span><span class="stat-value" id="robot2-efficiency"></span></div>
+            <div class="stat-row"><span class="stat-label">FX</span><span id="robot2-special-stats"></span></div>
+            <div class="stat-row"><span class="stat-label">ATK</span><span class="stat-value" id="robot2-attack-strength"></span></div>
+            <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value" id="robot2-parry-strength"></span></div>
+            <div class="stat-row"><span class="stat-label">SPD</span><span class="stat-value" id="robot2-move-speed"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="distance-container">
+        <div class="robot-with-stats">
+          <div class="robot-bars">
+            <div class="bar-label">HP</div>
+            <div class="value-bar">
+              <div id="robot1-hp" class="value-bar-fill hp"></div>
+            </div>
+            <div class="bar-label">Energy</div>
+            <div class="value-bar">
+              <div id="robot1-energy" class="value-bar-fill energy"></div>
+            </div>
+          </div>
+          <img id="player1-sprite" class="player-sprite" src="images/player1.png" alt="Robot 1">
+        </div>
+        <div class="robot-with-stats">
+          <div class="robot-bars">
+            <div class="bar-label">HP</div>
+            <div class="value-bar">
+              <div id="robot2-hp" class="value-bar-fill hp"></div>
+            </div>
+            <div class="bar-label">Energy</div>
+            <div class="value-bar">
+              <div id="robot2-energy" class="value-bar-fill energy"></div>
+            </div>
+          </div>
+          <img id="player2-sprite" class="player-sprite" src="images/player2.png" alt="Robot 2" style="transform: scaleX(-1); animation-delay: -200ms;">
+        </div>
+      </div>
+      <div style="text-align: center;">
+        <span id="distance-text"></span>
+      </div>
+    </div>
+
+    <!-- Fixed bottom HUD: purely visual/interaction layer, no game logic here -->
+    <div id="game-hud">
+      <div class="hud-panel" id="hud-effects">
+        <div class="hud-label">Effects</div>
+        <div id="robot1-passive-effects" class="passive-effects-workshop"></div>
+      </div>
+
+      <div id="hud-actions">
+        <div class="action-pill">
+          <button class="action-btn attack-btn" data-action="attack">Attack</button>
+          <button class="action-btn parry-btn"  data-action="parry">Parry</button>
+          <div class="action-move-split">
+            <button class="action-btn" data-action="go away">Away</button>
+            <button class="action-btn" data-action="get close">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-panel" id="hud-items">
+        <div class="hud-label">Items</div>
+        <div class="hud-items-list">
+          <button id="repair-kit-btn"      type="button" class="item-btn">Repair Kit</button>
+          <button id="energy-booster-btn"  type="button" class="item-btn">Energy Booster</button>
+          <button id="teleporter-btn"      type="button" class="item-btn">Teleporter</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // UI wiring only — maps visual action buttons to the hidden game logic hooks
+      (function () {
+        const select  = document.getElementById('robot1-action');
+        const fightBtn = document.getElementById('fight-btn');
+        const actionBtns = document.querySelectorAll('.action-btn[data-action]');
+
+        actionBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (fightBtn.disabled) return;
+            select.value = btn.dataset.action;
+            fightBtn.click();
+          });
+        });
+
+        // Mirror disabled state from fight-btn to action buttons during mini-game
+        new MutationObserver(() => {
+          actionBtns.forEach(b => { b.disabled = fightBtn.disabled; });
+        }).observe(fightBtn, { attributes: true, attributeFilter: ['disabled'] });
+
+        // Append round-result changes as new lines in the retro monitor
+        const roundResult  = document.getElementById('round-result');
+        const monitorLog   = document.getElementById('monitor-log');
+        const monitorScreen = document.getElementById('monitor-screen');
+        const MAX_LINES = 24;
+
+        new MutationObserver(() => {
+          const text = roundResult.textContent.trim();
+          if (!text) return;
+          const line = document.createElement('span');
+          line.className = 'log-line';
+          line.textContent = text;
+          monitorLog.appendChild(line);
+          // Trim oldest lines
+          while (monitorLog.children.length > MAX_LINES) {
+            monitorLog.removeChild(monitorLog.firstChild);
+          }
+          monitorScreen.scrollTop = monitorScreen.scrollHeight;
+        }).observe(roundResult, { childList: true, characterData: true, subtree: true });
+      })();
+    </script>
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
