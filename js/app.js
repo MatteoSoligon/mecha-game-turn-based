@@ -19,6 +19,7 @@ import {
   isLevelCleared,
   partsUnlockedBetween,
 } from "./progress.js";
+import { eventQuip, roundQuip } from "./quips.js";
 import { registerScreen, showScreen } from "./screens.js";
 import { initTopBar } from "./ui/topbar.js";
 import { initQuests, renderQuests } from "./ui/quests.js";
@@ -113,12 +114,50 @@ const fightBtn = document.getElementById("fight-btn");
 const repairKitBtn = document.getElementById("repair-kit-btn");
 const energyBoosterBtn = document.getElementById("energy-booster-btn");
 const teleporterBtn = document.getElementById("teleporter-btn");
-const resultText = document.getElementById("round-result");
 const robot1PassiveEffects = document.getElementById("robot1-passive-effects");
 const battleScreen = document.getElementById("screen-battle");
 const battleMission = document.getElementById("battle-mission");
 const retreatBtn = document.getElementById("retreat-btn");
 const monitorLog = document.getElementById("monitor-log");
+const monitorScreen = document.getElementById("monitor-screen");
+const aiAvatar = document.getElementById("ai-avatar");
+const monitorStatus = document.getElementById("monitor-status");
+
+const MAX_LOG_LINES = 24;
+const MOOD_STATUS = {
+  idle: "HAL-9K online",
+  happy: "HAL-9K pleased",
+  smug: "HAL-9K smug",
+  worried: "HAL-9K concerned",
+  alarm: "HAL-9K alarmed",
+};
+let moodResetTimer = null;
+
+function pushLog(text, kind = "system") {
+  const line = document.createElement("span");
+  line.className = `log-line log-line--${kind}`;
+  line.textContent = text;
+  monitorLog.appendChild(line);
+  while (monitorLog.children.length > MAX_LOG_LINES) {
+    monitorLog.removeChild(monitorLog.firstChild);
+  }
+  monitorScreen.scrollTop = monitorScreen.scrollHeight;
+}
+
+/** Sets the lens animation, then drifts back to idle so moods stay reactive. */
+function setAiMood(mood) {
+  aiAvatar.dataset.mood = mood;
+  monitorStatus.textContent = MOOD_STATUS[mood] || MOOD_STATUS.idle;
+  clearTimeout(moodResetTimer);
+  if (mood !== "idle") {
+    moodResetTimer = setTimeout(() => setAiMood("idle"), 4000);
+  }
+}
+
+function speak(quip) {
+  pushLog(quip.text, "ai");
+  setAiMood(quip.mood);
+}
 
 const robot1HpBar = document.getElementById("robot1-hp");
 const robot1EnergyBar = document.getElementById("robot1-energy");
@@ -205,7 +244,8 @@ function renderPassiveEffectsWorkshop(container, robot) {
       }
       renderPassiveEffectsWorkshop(container, robot);
       renderStats();
-      resultText.textContent = `${robot.name} armed passive effect: ${effect.label}`;
+      pushLog(`${robot.name} armed passive effect: ${effect.label}`);
+      speak(eventQuip("effect"));
     });
 
     button.append(icon, count);
@@ -273,7 +313,8 @@ function startBattle(levelId) {
     `Mission ${String(levelId).padStart(2, "0")} — ${level.title} vs ${state.robot2.name}`;
 
   monitorLog.replaceChildren();
-  resultText.textContent = `Deployed. Target: ${state.robot2.name}.`;
+  pushLog(`Deployed. Target: ${state.robot2.name}.`);
+  speak(eventQuip("deploy"));
 
   fightBtn.disabled = false;
   player1Sprite.src = state.robot1.image || "images/player1.png";
@@ -290,6 +331,7 @@ function endBattle(victory) {
   }
   state.finished = true;
   fightBtn.disabled = true;
+  speak(eventQuip(victory ? "victory" : "defeat"));
 
   const { levelId, robot1, rounds } = state;
   const hpRatio = robot1.maxHP ? robot1.currentHP / robot1.maxHP : 0;
@@ -386,13 +428,19 @@ fightBtn.addEventListener("click", async function () {
   showBarDelta(robot2HpBar, robot2.currentHP - robot2HpBefore, 'hp');
   showBarDelta(robot2EnergyBar, robot2.globalEnergy - robot2EnergyBefore, 'energy');
 
-  resultText.textContent =
-    "Robot 1 -> " +
-    action1Type +
-    " | Robot 2 -> " +
-    robot2Turn.action +
-    " | " +
-    (winner || "Round resolved.");
+  pushLog(
+    `Robot 1 -> ${action1Type} | Robot 2 -> ${robot2Turn.action} | ${winner || "Round resolved."}`,
+  );
+
+  speak(roundQuip({
+    playerAction: action1Type,
+    enemyAction: robot2Turn.action,
+    playerHpDelta: robot1.currentHP - robot1HpBefore,
+    enemyHpDelta: robot2.currentHP - robot2HpBefore,
+    playerHpRatio: robot1.maxHP ? robot1.currentHP / robot1.maxHP : 0,
+    enemyHpRatio: robot2.maxHP ? robot2.currentHP / robot2.maxHP : 0,
+    playerEnergyRatio: robot1.maxEnergy ? robot1.globalEnergy / robot1.maxEnergy : 0,
+  }));
 
   checkBattleEnd();
 });
@@ -401,21 +449,24 @@ repairKitBtn.addEventListener("click", function () {
   if (state.finished) return;
   new RepairKit(state.robot1).run();
   renderStats();
-  resultText.textContent = "Robot 1 used Repair Kit.";
+  pushLog("Robot 1 used Repair Kit.");
+  speak(eventQuip("repair"));
 });
 
 energyBoosterBtn.addEventListener("click", function () {
   if (state.finished) return;
   new EnergyBooster(state.robot1).run();
   renderStats();
-  resultText.textContent = "Robot 1 used Energy Booster.";
+  pushLog("Robot 1 used Energy Booster.");
+  speak(eventQuip("energy"));
 });
 
 teleporterBtn.addEventListener("click", function () {
   if (state.finished) return;
   new Teleporter(state.battle).run();
   renderStats();
-  resultText.textContent = "Teleporter activated.";
+  pushLog("Teleporter activated.");
+  speak(eventQuip("teleport"));
 });
 
 retreatBtn.addEventListener("click", function () {

@@ -248,11 +248,15 @@
         border: 3px solid var(--green);
         box-shadow: 4px 4px 0 var(--green);
         overflow: hidden;
-        max-width: 520px;
+        max-width: 620px;
         margin: 14px 0;
       }
 
       #monitor-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
         background: var(--green);
         color: var(--black);
         font-size: 7px;
@@ -261,9 +265,147 @@
         text-transform: uppercase;
       }
 
+      #monitor-status { letter-spacing: 1px; opacity: 0.75; }
+
+      #monitor-body { display: flex; align-items: stretch; }
+
+      /* ── HAL-style AI avatar ── */
+      #ai-avatar {
+        flex: 0 0 76px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 6px;
+        border-right: 2px solid var(--green);
+        background:
+          repeating-linear-gradient(
+            0deg,
+            transparent, transparent 3px,
+            rgba(16, 200, 64, 0.06) 3px, rgba(16, 200, 64, 0.06) 4px
+          ),
+          #060a0e;
+      }
+
+      .ai-plate {
+        position: relative;
+        width: 52px;
+        height: 52px;
+        border: 3px solid #2b3540;
+        border-radius: 2px;
+        background: radial-gradient(circle at 50% 40%, #1c2530, #05080b 70%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      /* thin sweep of light crossing the lens housing */
+      .ai-plate::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 40%, rgba(240, 240, 220, 0.14) 50%, transparent 60%);
+        animation: ai-sweep 3200ms linear infinite;
+      }
+
+      @keyframes ai-sweep {
+        0%   { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+      }
+
+      .ai-lens {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 50%, #ffe9c0 0%, var(--yellow) 14%, var(--red) 38%, #40080c 72%, #0a0507 100%);
+        box-shadow: 0 0 10px 2px rgba(210, 64, 64, 0.75), inset 0 0 6px rgba(0, 0, 0, 0.85);
+        animation: ai-breathe 2600ms ease-in-out infinite;
+      }
+
+      .ai-lens::before {
+        content: '';
+        position: absolute;
+        inset: 22%;
+        border-radius: 50%;
+        background: radial-gradient(circle at 40% 35%, #fffbe8, rgba(255, 255, 255, 0) 65%);
+        opacity: 0.85;
+      }
+
+      /* iris highlight drifting side to side = "looking around" */
+      .ai-lens::after {
+        content: '';
+        position: absolute;
+        top: 30%;
+        left: 26%;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        animation: ai-glance 4200ms ease-in-out infinite;
+      }
+
+      @keyframes ai-breathe {
+        0%, 100% { transform: scale(1);    filter: brightness(1); }
+        50%      { transform: scale(1.07); filter: brightness(1.35); }
+      }
+
+      @keyframes ai-glance {
+        0%, 100% { transform: translateX(0); }
+        30%      { transform: translateX(7px); }
+        60%      { transform: translateX(-5px); }
+      }
+
+      .ai-name {
+        font-size: 6px;
+        letter-spacing: 1px;
+        color: var(--green);
+        opacity: 0.8;
+      }
+
+      /* Mood variants recolour and retime the lens */
+      #ai-avatar[data-mood="happy"] .ai-lens {
+        background: radial-gradient(circle at 50% 50%, #eaffe8 0%, #9dff9d 14%, var(--green) 38%, #063d15 72%, #010805 100%);
+        box-shadow: 0 0 12px 3px rgba(16, 200, 64, 0.8), inset 0 0 6px rgba(0, 0, 0, 0.85);
+        animation-duration: 900ms;
+      }
+
+      #ai-avatar[data-mood="smug"] .ai-lens {
+        background: radial-gradient(circle at 50% 50%, #e8fbff 0%, #8fe6ff 14%, var(--blue) 38%, #04323e 72%, #01080a 100%);
+        box-shadow: 0 0 12px 3px rgba(0, 160, 200, 0.8), inset 0 0 6px rgba(0, 0, 0, 0.85);
+        animation-duration: 3400ms;
+      }
+
+      #ai-avatar[data-mood="worried"] .ai-lens {
+        background: radial-gradient(circle at 50% 50%, #fff6d0 0%, #ffd84d 14%, var(--yellow) 38%, #4a3a02 72%, #0a0801 100%);
+        box-shadow: 0 0 12px 3px rgba(250, 200, 0, 0.75), inset 0 0 6px rgba(0, 0, 0, 0.85);
+        animation-duration: 1200ms;
+      }
+
+      #ai-avatar[data-mood="alarm"] .ai-lens {
+        animation: ai-alarm 380ms steps(2, end) infinite;
+      }
+
+      @keyframes ai-alarm {
+        0%, 100% { transform: scale(1.1); filter: brightness(1.6) saturate(1.4); }
+        50%      { transform: scale(0.9); filter: brightness(0.6); }
+      }
+
+      #ai-avatar[data-mood="alarm"] .ai-name { color: var(--red); opacity: 1; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .ai-plate::after,
+        .ai-lens,
+        .ai-lens::after,
+        #ai-avatar[data-mood] .ai-lens { animation: none; }
+      }
+
       #monitor-screen {
+        flex: 1;
         padding: 10px 14px 8px;
-        min-height: 72px;
+        min-height: 96px;
         max-height: 150px;
         overflow-y: auto;
         scrollbar-width: none;
@@ -283,8 +425,25 @@
         line-height: 2;
       }
 
-      .log-line { display: block; }
+      .log-line { display: block; animation: log-line-in 220ms ease-out; }
       .log-line::before { content: '> '; color: var(--green); opacity: 0.4; }
+
+      @keyframes log-line-in {
+        0%   { opacity: 0; transform: translateX(-6px); }
+        100% { opacity: 1; transform: none; }
+      }
+
+      /* AI commentary reads as a different voice from raw combat telemetry */
+      .log-line--ai {
+        color: var(--yellow);
+        opacity: 0.95;
+        padding-left: 8px;
+        border-left: 2px solid rgba(250, 200, 0, 0.45);
+        margin: 2px 0;
+      }
+
+      .log-line--ai::before { content: '\260E '; opacity: 0.6; }
+      .log-line--system { opacity: 0.75; }
 
       .monitor-cursor {
         color: var(--green);
@@ -986,14 +1145,24 @@
         <option value="go away">go away</option>
       </select>
       <button id="fight-btn" type="button" hidden>Fight</button>
-      <p id="round-result" hidden>Ready for battle.</p>
       <div id="monitor">
-        <div id="monitor-header">&#9646; Battle Log</div>
-        <div id="monitor-screen">
-          <div id="monitor-log">
-            <span class="log-line">System ready. Choose your action.</span>
+        <div id="monitor-header">
+          <span>&#9646; Battle Log</span>
+          <span id="monitor-status">HAL-9K online</span>
+        </div>
+        <div id="monitor-body">
+          <div id="ai-avatar" data-mood="idle" aria-hidden="true">
+            <div class="ai-plate">
+              <div class="ai-lens"></div>
+            </div>
+            <div class="ai-name">HAL-9K</div>
           </div>
-          <span class="monitor-cursor">&#9608;</span>
+          <div id="monitor-screen">
+            <div id="monitor-log" role="log" aria-live="polite">
+              <span class="log-line log-line--system">System ready. Choose your action.</span>
+            </div>
+            <span class="monitor-cursor">&#9608;</span>
+          </div>
         </div>
       </div>
 
@@ -1104,26 +1273,6 @@
         new MutationObserver(() => {
           actionBtns.forEach(b => { b.disabled = fightBtn.disabled; });
         }).observe(fightBtn, { attributes: true, attributeFilter: ['disabled'] });
-
-        // Append round-result changes as new lines in the retro monitor
-        const roundResult  = document.getElementById('round-result');
-        const monitorLog   = document.getElementById('monitor-log');
-        const monitorScreen = document.getElementById('monitor-screen');
-        const MAX_LINES = 24;
-
-        new MutationObserver(() => {
-          const text = roundResult.textContent.trim();
-          if (!text) return;
-          const line = document.createElement('span');
-          line.className = 'log-line';
-          line.textContent = text;
-          monitorLog.appendChild(line);
-          // Trim oldest lines
-          while (monitorLog.children.length > MAX_LINES) {
-            monitorLog.removeChild(monitorLog.firstChild);
-          }
-          monitorScreen.scrollTop = monitorScreen.scrollHeight;
-        }).observe(roundResult, { childList: true, characterData: true, subtree: true });
       })();
     </script>
     <script type="module" src="./js/app.js"></script>
