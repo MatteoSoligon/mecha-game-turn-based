@@ -1,22 +1,48 @@
 import { Battle } from "./battle.js";
-import { getRandomRobot } from "./robots.js";
 import { EnergyBooster, RepairKit, Teleporter } from "./item.js";
-import {
-  ShortRangeArm,
-  MediumRangeArm,
-  BulwarkTorso,
-  AegisTorso,
-  SprinterLegs,
-  RaiderLegs,
-} from "./parts.js";
-import { Robot, AIRobot } from "./robot.js";
+import { Robot } from "./robot.js";
 import { FloodedCity } from "./terrain.js";
 import { normalizeAction, resolveDirection } from "./actions.js";
 import { PASSIVE_EFFECTS_BY_KEY } from "./effects.js";
 import { runMiniGame } from "./minigame.js";
+import {
+  LEVELS_BY_ID,
+  computeRewards,
+  createEnemyForLevel,
+} from "./campaign.js";
+import {
+  addRewards,
+  buildLoadoutParts,
+  clearedCount,
+  completeLevel,
+  getProgress,
+  isLevelCleared,
+  partsUnlockedBetween,
+} from "./progress.js";
+import { registerScreen, showScreen } from "./screens.js";
+import { initTopBar } from "./ui/topbar.js";
+import { initQuests, renderQuests } from "./ui/quests.js";
+import { initBriefing, renderBriefing } from "./ui/briefing.js";
+import { initResults, renderResults } from "./ui/results.js";
 
-function absoluteWidth(value, cap = 110) {
-  return Math.max(0, Math.min(cap, Math.round(value * 2)));
+const PLAYER_ENERGY_STOCKS = { attack: 0.4, parry: 0.5, move: 0.1 };
+
+/** Live battle state; rebuilt from scratch every time a mission is deployed. */
+const state = {
+  levelId: null,
+  robot1: null,
+  robot2: null,
+  battle: null,
+  rounds: 0,
+  finished: true,
+  pendingLoser: null,
+};
+
+function barWidth(value, max) {
+  if (!max) {
+    return "0%";
+  }
+  return `${Math.max(0, Math.min(100, (value / max) * 100))}%`;
 }
 
 function showBarDelta(barEl, delta, type) {
@@ -43,10 +69,10 @@ function blinkSprite(sprite, effectClass) {
 }
 
 function spriteForRobot(robot) {
-  if (robot === robot1) {
+  if (robot === state.robot1) {
     return player1Sprite;
   }
-  if (robot === robot2) {
+  if (robot === state.robot2) {
     return player2Sprite;
   }
   return null;
@@ -82,21 +108,6 @@ function showEffectConsumed(robot, effectKey) {
   badge.addEventListener("animationend", () => badge.remove());
 }
 
-const robot1 = new Robot([
-  new ShortRangeArm(),
-  new BulwarkTorso(),
-  new SprinterLegs(),
-], {
-  attack: 0.4,
-  parry: 0.5,
-  move: 0.1,
-}, 'player');
-
-const robot2 = getRandomRobot();
-
-
-
-const battle = new Battle(new FloodedCity());
 const actionInput = document.getElementById("robot1-action");
 const fightBtn = document.getElementById("fight-btn");
 const repairKitBtn = document.getElementById("repair-kit-btn");
@@ -104,6 +115,10 @@ const energyBoosterBtn = document.getElementById("energy-booster-btn");
 const teleporterBtn = document.getElementById("teleporter-btn");
 const resultText = document.getElementById("round-result");
 const robot1PassiveEffects = document.getElementById("robot1-passive-effects");
+const battleScreen = document.getElementById("screen-battle");
+const battleMission = document.getElementById("battle-mission");
+const retreatBtn = document.getElementById("retreat-btn");
+const monitorLog = document.getElementById("monitor-log");
 
 const robot1HpBar = document.getElementById("robot1-hp");
 const robot1EnergyBar = document.getElementById("robot1-energy");
@@ -155,7 +170,7 @@ function renderSpecialStatIcons(container, stats) {
 }
 
 function renderPassiveEffectsWorkshop(container, robot) {
-  if (!container) {
+  if (!container || !robot) {
     return;
   }
 
@@ -201,21 +216,21 @@ function renderPassiveEffectsWorkshop(container, robot) {
 }
 
 function renderStats() {
-  const robot1MaxEnergy = robot1.maxEnergy;
-  const robot2MaxEnergy = robot2.maxEnergy;
+  const { robot1, robot2, battle } = state;
+  if (!robot1 || !robot2 || !battle) {
+    return;
+  }
 
-  robot1HpBar.style.width = `${absoluteWidth(robot1.currentHP)}px`;
-
-  robot1EnergyBar.style.width = `${absoluteWidth(robot1.globalEnergy)}px`;
+  robot1HpBar.style.width = barWidth(robot1.currentHP, robot1.maxHP);
+  robot1EnergyBar.style.width = barWidth(robot1.globalEnergy, robot1.maxEnergy);
 
   robot1Parts.textContent = robot1.parts.map(p => p.name).join(", ");
   robot1Efficiency.textContent = robot1.efficiency.toFixed(2);
 
   renderSpecialStatIcons(robot1SpecialStats, robot1.specialStats);
 
-  robot2HpBar.style.width = `${absoluteWidth(robot2.currentHP)}px`;
-
-  robot2EnergyBar.style.width = `${absoluteWidth(robot2.globalEnergy)}px`;
+  robot2HpBar.style.width = barWidth(robot2.currentHP, robot2.maxHP);
+  robot2EnergyBar.style.width = barWidth(robot2.globalEnergy, robot2.maxEnergy);
 
   robot2Parts.textContent = robot2.parts.map(p => p.name).join(", ");
   robot2Efficiency.textContent = robot2.efficiency.toFixed(2);
@@ -225,20 +240,101 @@ function renderStats() {
   distanceContainer.style.gap = `${battle.distance * 60}px`;
   distanceText.textContent = "Distance: " + battle.distance.toFixed(2);
 
-  robot1AttackStrength.textContent = robot1.attackStrength(battle.distance);
-  robot1ParryStrength.textContent = robot1.parryStrength();
+  robot1AttackStrength.textContent = robot1.attackStrength(battle.distance).toFixed(1);
+  robot1ParryStrength.textContent = robot1.parryStrength().toFixed(1);
   robot1MoveSpeed.textContent = robot1.moveSpeed().toFixed(2);
-  robot2AttackStrength.textContent = robot2.attackStrength(battle.distance);
-  robot2ParryStrength.textContent = robot2.parryStrength();
+  robot2AttackStrength.textContent = robot2.attackStrength(battle.distance).toFixed(1);
+  robot2ParryStrength.textContent = robot2.parryStrength().toFixed(1);
   robot2MoveSpeed.textContent = robot2.moveSpeed().toFixed(2);
 }
 
+/* ----------------------------------------------------------------------------
+ * Mission lifecycle
+ * ------------------------------------------------------------------------- */
 
-battle.setupBattle(robot1, robot2);
-document.body.style.background = battle.terrain.backgroundGradient;
-console.log("Battle setup complete. Terrain: " + battle.terrain.constructor.name);
+function startBattle(levelId) {
+  const level = LEVELS_BY_ID[levelId];
+  if (!level) {
+    return;
+  }
+
+  state.levelId = levelId;
+  state.robot1 = new Robot(buildLoadoutParts(), PLAYER_ENERGY_STOCKS, "player");
+  state.robot2 = createEnemyForLevel(levelId);
+  state.battle = new Battle(new FloodedCity());
+  state.rounds = 0;
+  state.finished = false;
+  state.pendingLoser = null;
+
+  state.battle.setupBattle(state.robot1, state.robot2);
+  battleScreen.style.background = state.battle.terrain.backgroundGradient;
+
+  battleMission.textContent =
+    `Mission ${String(levelId).padStart(2, "0")} — ${level.title} vs ${state.robot2.name}`;
+
+  monitorLog.replaceChildren();
+  resultText.textContent = `Deployed. Target: ${state.robot2.name}.`;
+
+  fightBtn.disabled = false;
+  player1Sprite.src = state.robot1.image || "images/player1.png";
+  player2Sprite.src = state.robot2.image || "images/player2.png";
+
+  renderStats();
+  renderPassiveEffectsWorkshop(robot1PassiveEffects, state.robot1);
+  showScreen("battle");
+}
+
+function endBattle(victory) {
+  if (state.finished) {
+    return;
+  }
+  state.finished = true;
+  fightBtn.disabled = true;
+
+  const { levelId, robot1, rounds } = state;
+  const hpRatio = robot1.maxHP ? robot1.currentHP / robot1.maxHP : 0;
+  const firstClear = victory && !isLevelCleared(levelId);
+  const rewards = computeRewards({ levelId, victory, hpRatio, rounds, firstClear });
+
+  const prevXp = getProgress().xp;
+  const prevCleared = clearedCount();
+
+  if (victory) {
+    completeLevel(levelId);
+  }
+  addRewards(rewards);
+
+  showScreen("results", {
+    levelId,
+    victory,
+    rounds,
+    hpRatio,
+    rewards,
+    prevXp,
+    newXp: getProgress().xp,
+    unlocked: partsUnlockedBetween(prevCleared, clearedCount()),
+  });
+}
+
+/** Resolves the outcome after a round, if either machine is out of the fight. */
+function checkBattleEnd() {
+  const loser = state.pendingLoser;
+  if (!loser) {
+    return;
+  }
+  endBattle(loser === state.robot2);
+}
+
+/* ----------------------------------------------------------------------------
+ * Battle interaction
+ * ------------------------------------------------------------------------- */
 
 fightBtn.addEventListener("click", async function () {
+  const { robot1, robot2, battle } = state;
+  if (state.finished || !robot1) {
+    return;
+  }
+
   const robot1HpBefore = robot1.currentHP;
   const robot2HpBefore = robot2.currentHP;
   const robot1EnergyBefore = robot1.globalEnergy;
@@ -255,18 +351,16 @@ fightBtn.addEventListener("click", async function () {
 
   fightBtn.disabled = true;
   robot1._miniGameResult = await runMiniGame(robot1.efficiency);
-  fightBtn.disabled = false;
+  fightBtn.disabled = state.finished;
 
-  console.log(
-    "Robot 2 chose: " + robot2Turn.action + " with direction ",
-    robot2Turn.direction,
-  );
   const winner = battle.fight(
     robot1,
     robot2,
     { action1Type: normalizedAction1, direction1: robot1Direction },
     { action2Type: normalizedAction2, direction2: robot2Turn.direction },
   );
+
+  state.rounds += 1;
 
   if (robot1.currentHP < robot1HpBefore) {
     blinkSprite(player1Sprite, "sprite-blink-red");
@@ -299,37 +393,73 @@ fightBtn.addEventListener("click", async function () {
     robot2Turn.action +
     " | " +
     (winner || "Round resolved.");
+
+  checkBattleEnd();
 });
 
 repairKitBtn.addEventListener("click", function () {
-  new RepairKit(robot1).run();
+  if (state.finished) return;
+  new RepairKit(state.robot1).run();
   renderStats();
   resultText.textContent = "Robot 1 used Repair Kit.";
 });
 
 energyBoosterBtn.addEventListener("click", function () {
-  new EnergyBooster(robot1).run();
+  if (state.finished) return;
+  new EnergyBooster(state.robot1).run();
   renderStats();
   resultText.textContent = "Robot 1 used Energy Booster.";
 });
 
 teleporterBtn.addEventListener("click", function () {
-  new Teleporter(battle).run();
+  if (state.finished) return;
+  new Teleporter(state.battle).run();
   renderStats();
   resultText.textContent = "Teleporter activated.";
 });
 
+retreatBtn.addEventListener("click", function () {
+  if (!state.finished && !window.confirm("Retreat? The mission is abandoned and you earn nothing.")) {
+    return;
+  }
+  state.finished = true;
+  showScreen("quests");
+});
+
+// A surrender means that machine is out of the fight. The round finishes
+// resolving first, then checkBattleEnd() decides the winner.
 window.addEventListener(Robot.SURRENDER_FOR_ENERGY_EVENT, (event) => {
-  alert("Robot surrendered due to low energy! " + event.detail.robot.name);
+  if (!state.pendingLoser) {
+    state.pendingLoser = event.detail.robot;
+  }
 });
 window.addEventListener(Robot.SURRENDER_FOR_HP_EVENT, (event) => {
-  alert("Robot surrendered due to low HP! " + event.detail.robot.name);
+  if (!state.pendingLoser) {
+    state.pendingLoser = event.detail.robot;
+  }
 });
 window.addEventListener(Robot.EFFECT_CONSUMED_EVENT, (event) => {
   showEffectConsumed(event.detail.robot, event.detail.effect);
 });
 
-renderStats();
-renderPassiveEffectsWorkshop(robot1PassiveEffects, robot1);
-player1Sprite.src = robot1.image || "images/player1.png"; // fallback
-player2Sprite.src = robot2.image || "images/player2.png"; // fallback
+/* ----------------------------------------------------------------------------
+ * Boot
+ * ------------------------------------------------------------------------- */
+
+const goToQuests = () => showScreen("quests");
+
+initTopBar({ onNavigateQuests: goToQuests });
+initQuests({ onSelect: (levelId) => showScreen("briefing", levelId) });
+initBriefing({ onDeploy: startBattle });
+initResults({
+  onReplay: startBattle,
+  onNext: (levelId) => showScreen("briefing", levelId),
+  onWorkshop: (levelId) => showScreen("briefing", levelId),
+  onQuests: goToQuests,
+});
+
+registerScreen("quests", renderQuests);
+registerScreen("briefing", renderBriefing);
+registerScreen("results", renderResults);
+
+showScreen("quests");

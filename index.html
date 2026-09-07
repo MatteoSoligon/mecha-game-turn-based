@@ -444,10 +444,539 @@
       .minigame-result[data-outcome="hit"]     { color: var(--green); }
       .minigame-result[data-outcome="partial"] { color: var(--yellow); }
       .minigame-result[data-outcome="miss"]    { color: var(--red); }
+
+      /* ══════════════════════════════════════════════════════════════════
+         Campaign shell: screens, top bar, quests, briefing, results
+         ══════════════════════════════════════════════════════════════════ */
+
+      /* ── Screens ── */
+      .screen { display: none; }
+      .screen--active { display: block; }
+
+      body { padding-bottom: 40px; margin: 0; }
+      body[data-screen="battle"] { padding-bottom: 130px; }
+
+      .screen-inner { max-width: 1040px; margin: 0 auto; padding: 20px 16px 30px; }
+      #screen-results .screen-inner { max-width: 720px; }
+
+      .screen-title {
+        font-size: 14px;
+        letter-spacing: 3px;
+        margin: 0 0 8px;
+        text-transform: uppercase;
+      }
+
+      .screen-sub { font-size: 7px; opacity: 0.6; margin: 0 0 22px; line-height: 1.9; }
+
+      /* ── Ghost button ── */
+      .ghost-btn {
+        background: transparent;
+        border: 2px solid var(--white);
+        color: var(--white);
+        font-family: 'Press Start 2P', monospace;
+        font-size: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        white-space: nowrap;
+      }
+
+      .ghost-btn:hover { background: var(--white); color: var(--black); }
+      .ghost-btn--danger { border-color: var(--red); color: var(--red); }
+      .ghost-btn--danger:hover { background: var(--red); color: var(--white); }
+
+      /* ── Top bar ── */
+      #top-bar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 10px 16px;
+        background: var(--black);
+        border-bottom: 3px solid var(--white);
+      }
+
+      body[data-screen="quests"] #topbar-back { visibility: hidden; }
+
+      .topbar-right { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+      .resource { display: flex; align-items: center; gap: 6px; }
+
+      .resource-label {
+        font-size: 6px;
+        letter-spacing: 2px;
+        color: var(--white);
+        opacity: 0.45;
+        text-transform: uppercase;
+      }
+
+      .resource-value { font-size: 11px; color: var(--yellow); display: inline-block; }
+
+      .resource-value--pulse { animation: resource-pulse 600ms ease-out; }
+
+      @keyframes resource-pulse {
+        0%   { transform: scale(1);   color: var(--yellow); }
+        30%  { transform: scale(1.4); color: var(--green); }
+        100% { transform: scale(1);   color: var(--yellow); }
+      }
+
+      .rank-block { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+      .rank-line { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+      #topbar-rank { color: var(--blue); font-size: 7px; letter-spacing: 1px; }
+      #topbar-rank-next { font-size: 6px; color: var(--white); opacity: 0.45; }
+      .value-bar-fill.xp { background: var(--blue); }
+      .rank-bar { border-color: var(--white); }
+
+      /* ── Quest path ── */
+      .quest-chapter { margin-bottom: 26px; }
+      .quest-chapter--locked { opacity: 0.55; }
+
+      .quest-chapter-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: var(--black);
+        color: var(--white);
+        padding: 9px 12px;
+      }
+
+      .quest-chapter-name { margin: 0; font-size: 9px; letter-spacing: 2px; }
+      .quest-chapter-count { font-size: 8px; color: var(--yellow); }
+      .quest-chapter-sub { margin: 9px 0 12px; font-size: 6px; opacity: 0.6; line-height: 2; }
+
+      .quest-track { display: flex; gap: 12px; flex-wrap: wrap; }
+
+      .quest-node {
+        flex: 1 1 190px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 10px 10px;
+        background: var(--black);
+        color: var(--white);
+        border: 3px solid var(--white);
+        box-shadow: 4px 4px 0 var(--white);
+        font-family: 'Press Start 2P', monospace;
+        cursor: pointer;
+        text-align: center;
+        transition: transform 0.12s, box-shadow 0.12s;
+      }
+
+      .quest-node:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--white); }
+      .quest-node[data-state="cleared"] { border-color: var(--green); box-shadow: 4px 4px 0 var(--green); }
+      .quest-node[data-state="locked"]  { border-color: #4a5560; box-shadow: 4px 4px 0 #4a5560; cursor: not-allowed; opacity: 0.65; }
+      .quest-node--next { border-color: var(--yellow); box-shadow: 4px 4px 0 var(--yellow); animation: quest-next-glow 1600ms ease-in-out infinite; }
+
+      @keyframes quest-next-glow {
+        0%, 100% { box-shadow: 4px 4px 0 var(--yellow); }
+        50%      { box-shadow: 4px 4px 0 var(--yellow), 0 0 0 3px rgba(250, 200, 0, 0.35); }
+      }
+
+      .quest-node-index { font-size: 7px; color: var(--yellow); letter-spacing: 2px; }
+      .quest-node-portrait { height: 74px; display: flex; align-items: center; justify-content: center; font-size: 22px; opacity: 0.85; }
+      .quest-node-portrait img { height: 74px; image-rendering: pixelated; }
+      .quest-node-title { font-size: 8px; line-height: 1.7; }
+      .quest-node-meta { font-size: 6px; opacity: 0.55; line-height: 1.7; }
+      .quest-node-reward { font-size: 6px; color: var(--yellow); }
+
+      .quest-node-badge {
+        margin-top: 2px;
+        font-size: 6px;
+        letter-spacing: 2px;
+        padding: 3px 6px;
+        border: 2px solid currentColor;
+      }
+
+      .quest-node[data-state="cleared"] .quest-node-badge { color: var(--green); }
+      .quest-node[data-state="locked"]  .quest-node-badge { color: #8a95a0; }
+      .quest-node--next .quest-node-badge { color: var(--yellow); }
+
+      /* ── Briefing ── */
+      .briefing-grid {
+        display: grid;
+        grid-template-columns: minmax(240px, 330px) 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .info-card {
+        background: var(--black);
+        border: 3px solid var(--white);
+        box-shadow: 4px 4px 0 var(--white);
+        overflow: hidden;
+      }
+
+      #briefing-enemy  { border-color: var(--red);  box-shadow: 4px 4px 0 var(--red);  color: var(--red); }
+      #briefing-player { border-color: var(--blue); box-shadow: 4px 4px 0 var(--blue); color: var(--blue); margin-top: 14px; }
+
+      .briefing-hero { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; }
+      .briefing-hero img { height: 120px; image-rendering: pixelated; }
+      .briefing-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+
+      .tier-badge {
+        font-size: 6px;
+        letter-spacing: 1px;
+        padding: 3px 6px;
+        border: 2px solid;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .tier-badge--weak,   .tier-badge--base     { color: var(--green);  border-color: var(--green); }
+      .tier-badge--medium, .tier-badge--advanced { color: var(--blue);   border-color: var(--blue); }
+      .tier-badge--boss,   .tier-badge--legend   { color: var(--yellow); border-color: var(--yellow); }
+
+      .faction-badge { font-size: 6px; padding: 3px 6px; border: 2px solid var(--white); color: var(--white); }
+
+      .briefing-lore, .briefing-tactic { margin: 0 12px 10px; font-size: 6px; color: var(--white); line-height: 2.1; opacity: 0.65; }
+      .briefing-tactic { color: var(--yellow); opacity: 0.9; }
+
+      .effect-icon-row { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+      .effect-chip-count { font-size: 6px; margin-left: 3px; color: var(--black); }
+
+      /* ── Workshop ── */
+      .workshop-heading { font-size: 9px; letter-spacing: 2px; margin: 0 0 4px; text-transform: uppercase; }
+      .workshop-note { font-size: 6px; opacity: 0.55; margin: 0 0 12px; line-height: 2; }
+      .workshop { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+      .workshop-column { display: flex; flex-direction: column; gap: 8px; }
+
+      .workshop-slot-title {
+        margin: 0;
+        font-size: 7px;
+        letter-spacing: 1px;
+        padding: 8px 9px;
+        background: var(--black);
+        color: var(--white);
+        border-left: 5px solid var(--white);
+        text-transform: uppercase;
+        line-height: 1.6;
+      }
+
+      .workshop-slot-title.attack-icon { border-left-color: var(--red); }
+      .workshop-slot-title.parry-icon  { border-left-color: var(--blue); }
+      .workshop-slot-title.move-icon   { border-left-color: var(--yellow); }
+
+      .part-card {
+        background: var(--black);
+        color: var(--white);
+        border: 3px solid #3a4450;
+        padding: 9px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .part-card[data-status="equipped"]     { border-color: var(--green);  box-shadow: 3px 3px 0 var(--green); }
+      .part-card[data-status="owned"]        { border-color: var(--white); }
+      .part-card[data-status="buyable"]      { border-color: var(--yellow); box-shadow: 3px 3px 0 var(--yellow); }
+      .part-card[data-status="unaffordable"] { border-color: #6a7580; }
+      .part-card[data-status="locked"]       { opacity: 0.45; }
+
+      .part-card--just-bought { animation: part-bought 700ms ease-out; }
+
+      @keyframes part-bought {
+        0%   { transform: scale(1); }
+        35%  { transform: scale(1.05); box-shadow: 0 0 0 4px rgba(16, 200, 64, 0.45); }
+        100% { transform: scale(1); }
+      }
+
+      .part-card-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+      .part-card-name { font-size: 7px; letter-spacing: 1px; line-height: 1.6; }
+      .part-card-stats { margin: 0; font-size: 6px; color: var(--yellow); line-height: 1.9; }
+      .part-card-blurb { margin: 0; font-size: 6px; opacity: 0.5; line-height: 2; }
+
+      .part-card-action {
+        margin-top: auto;
+        padding: 8px 6px;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 6px;
+        background: var(--white);
+        color: var(--black);
+        border: 2px solid var(--black);
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .part-card-action:hover:not(:disabled) { filter: brightness(1.15); }
+      .part-card-action:disabled { opacity: 0.4; cursor: not-allowed; }
+      .part-card[data-status="buyable"] .part-card-action { background: var(--yellow); }
+      .part-card[data-status="equipped"] .part-card-action { background: var(--green); }
+
+      .briefing-footer {
+        position: sticky;
+        bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        padding: 16px 0 8px;
+        background: linear-gradient(transparent, var(--white) 45%);
+      }
+
+      #deploy-btn {
+        padding: 14px 28px;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 10px;
+        background: var(--red);
+        color: var(--white);
+        border: 3px solid var(--black);
+        box-shadow: 5px 5px 0 var(--black);
+        cursor: pointer;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      #deploy-btn:hover { filter: brightness(1.15); }
+      #deploy-btn:active { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--black); }
+
+      /* ── Battle header ── */
+      #battle-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+      }
+
+      #battle-mission { font-size: 8px; letter-spacing: 2px; }
+      #retreat-btn { border-color: var(--black); color: var(--black); }
+      #retreat-btn:hover { background: var(--black); color: var(--white); }
+
+      /* ── Results ── */
+      .results-card {
+        background: var(--black);
+        border: 3px solid var(--white);
+        box-shadow: 6px 6px 0 var(--white);
+        padding: 24px 22px;
+        color: var(--white);
+      }
+
+      #results-banner {
+        text-align: center;
+        font-size: 22px;
+        letter-spacing: 6px;
+        margin: 4px 0 16px;
+        animation: banner-slam 520ms cubic-bezier(0.2, 1.4, 0.4, 1);
+      }
+
+      #results-banner[data-outcome="victory"] { color: var(--green); }
+      #results-banner[data-outcome="defeat"]  { color: var(--red); }
+
+      @keyframes banner-slam {
+        0%   { opacity: 0; transform: scale(2.2); }
+        60%  { opacity: 1; transform: scale(0.92); }
+        100% { transform: scale(1); }
+      }
+
+      #results-title { text-align: center; font-size: 8px; margin: 0 0 8px; line-height: 1.8; }
+      #results-summary { text-align: center; font-size: 6px; opacity: 0.55; margin: 0 0 20px; line-height: 2; }
+
+      .reward-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 7px;
+        padding: 9px 0;
+        border-bottom: 1px dashed rgba(240, 240, 220, 0.2);
+        opacity: 0;
+        transform: translateX(-10px);
+        transition: opacity 260ms ease-out, transform 260ms ease-out;
+      }
+
+      .reward-line--in { opacity: 1; transform: none; }
+      .reward-line-value { color: var(--yellow); }
+      .reward-line--bonus .reward-line-value { color: var(--green); }
+
+      .reward-total {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 14px;
+        padding-top: 12px;
+        opacity: 0;
+        transform: scale(0.9);
+        transition: opacity 300ms ease-out, transform 300ms ease-out;
+      }
+
+      .reward-total--in { opacity: 1; transform: none; }
+      .reward-total-label { font-size: 7px; letter-spacing: 2px; opacity: 0.6; }
+      .reward-total-value { font-size: 18px; color: var(--yellow); }
+      .reward-total-unit { font-size: 7px; color: var(--yellow); margin-left: 6px; }
+
+      .results-xp { margin-top: 20px; }
+      .results-xp-head { display: flex; justify-content: space-between; gap: 10px; font-size: 6px; opacity: 0.7; margin-bottom: 6px; }
+      .results-xp .value-bar { height: 10px; border-color: var(--white); }
+
+      #results-rankup {
+        margin-top: 12px;
+        text-align: center;
+        font-size: 9px;
+        color: var(--yellow);
+        letter-spacing: 2px;
+        animation: rankup-pop 700ms ease-out;
+      }
+
+      @keyframes rankup-pop {
+        0%   { opacity: 0; transform: scale(0.5); }
+        60%  { opacity: 1; transform: scale(1.15); }
+        100% { transform: scale(1); }
+      }
+
+      #results-unlocks { margin-top: 22px; border-top: 2px solid rgba(240, 240, 220, 0.2); padding-top: 16px; }
+      .unlock-heading { margin: 0 0 10px; font-size: 7px; color: var(--green); letter-spacing: 1px; line-height: 1.8; }
+      .unlock-grid { display: flex; flex-direction: column; gap: 6px; }
+
+      .unlock-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 9px;
+        border: 2px solid var(--green);
+        font-size: 6px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 300ms ease-out, transform 300ms ease-out;
+      }
+
+      .unlock-chip--in { opacity: 1; transform: none; }
+      .unlock-chip-name { font-size: 7px; }
+      .unlock-chip-cost { color: var(--yellow); }
+
+      #results-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 24px; }
+
+      .results-btn {
+        padding: 12px 18px;
+        font-family: 'Press Start 2P', monospace;
+        font-size: 7px;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 3px solid var(--white);
+      }
+
+      .results-btn--primary { background: var(--green); color: var(--black); box-shadow: 4px 4px 0 var(--white); }
+      .results-btn--ghost   { background: transparent;  color: var(--white); }
+      .results-btn:hover { filter: brightness(1.15); }
+
+      @media (max-width: 880px) {
+        .briefing-grid { grid-template-columns: 1fr; }
+        .workshop { grid-template-columns: 1fr; }
+        .robot-card { max-width: 100%; }
+      }
     </style>
   </head>
-  <body>
-    <div>
+  <body data-screen="quests">
+    <!-- Persistent resource bar: scrap, pilot rank, navigation -->
+    <header id="top-bar">
+      <button id="topbar-back" type="button" class="ghost-btn">&#9664; Quest Path</button>
+      <div class="topbar-right">
+        <div class="resource">
+          <span class="resource-label">Scrap</span>
+          <span id="topbar-scrap" class="resource-value">0</span>
+        </div>
+        <div class="rank-block">
+          <div class="rank-line">
+            <span id="topbar-rank">Cadet</span>
+            <span id="topbar-rank-next">0/200</span>
+          </div>
+          <div class="value-bar rank-bar">
+            <div id="topbar-xp-fill" class="value-bar-fill xp"></div>
+          </div>
+        </div>
+        <button id="topbar-reset" type="button" class="ghost-btn ghost-btn--danger">Reset</button>
+      </div>
+    </header>
+
+    <!-- ══ Quest path ══ -->
+    <section id="screen-quests" class="screen screen--active">
+      <div class="screen-inner">
+        <h1 class="screen-title">Quest Path</h1>
+        <p class="screen-sub">
+          Twelve missions. Every clear pays scrap and opens stronger blueprints in the workshop.
+          <br><span id="quest-progress"></span>
+        </p>
+        <div id="quest-chapters"></div>
+      </div>
+    </section>
+
+    <!-- ══ Battle briefing / workshop ══ -->
+    <section id="screen-briefing" class="screen">
+      <div class="screen-inner">
+        <h1 class="screen-title" id="briefing-title"></h1>
+        <p class="screen-sub" id="briefing-subtitle"></p>
+
+        <div class="briefing-grid">
+          <div class="briefing-col">
+            <div id="briefing-enemy" class="info-card"></div>
+            <div id="briefing-player" class="info-card"></div>
+          </div>
+
+          <div>
+            <h2 class="workshop-heading">Workshop</h2>
+            <p class="workshop-note">
+              Buy blueprints with scrap, then equip one part per slot. Locked blueprints open as you clear missions.
+            </p>
+            <div id="briefing-workshop" class="workshop"></div>
+          </div>
+        </div>
+
+        <div class="briefing-footer">
+          <button id="deploy-btn" type="button">Deploy &#9654;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ Results ══ -->
+    <section id="screen-results" class="screen">
+      <div class="screen-inner">
+        <div class="results-card">
+          <div id="results-banner"></div>
+          <p id="results-title"></p>
+          <p id="results-summary"></p>
+
+          <div id="results-lines"></div>
+
+          <div class="reward-total">
+            <span class="reward-total-label">Total</span>
+            <span>
+              <span id="results-total" class="reward-total-value">0</span>
+              <span class="reward-total-unit">scrap</span>
+            </span>
+          </div>
+
+          <div class="results-xp">
+            <div class="results-xp-head">
+              <span id="results-xp-text"></span>
+              <span>Pilot Rank</span>
+            </div>
+            <div class="value-bar">
+              <div id="results-xp-fill" class="value-bar-fill xp"></div>
+            </div>
+            <div id="results-rankup" hidden></div>
+          </div>
+
+          <div id="results-unlocks" hidden></div>
+          <div id="results-actions"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ Battle ══ -->
+    <section id="screen-battle" class="screen">
+      <div class="screen-inner">
+      <div id="battle-header">
+        <span id="battle-mission"></span>
+        <button id="retreat-btn" type="button" class="ghost-btn">Retreat</button>
+      </div>
       <!-- Hidden: app.js reads these; the HUD buttons drive them -->
       <label for="robot1-action" hidden>Robot 1 Action:</label>
       <select id="robot1-action" hidden>
@@ -525,9 +1054,9 @@
       <div style="text-align: center;">
         <span id="distance-text"></span>
       </div>
-    </div>
+      </div>
 
-    <!-- Fixed bottom HUD: purely visual/interaction layer, no game logic here -->
+      <!-- Fixed bottom HUD: purely visual/interaction layer, no game logic here -->
     <div id="game-hud">
       <div class="hud-panel" id="hud-effects">
         <div class="hud-label">Effects</div>
@@ -553,7 +1082,8 @@
           <button id="teleporter-btn"      type="button" class="item-btn">Teleporter</button>
         </div>
       </div>
-    </div>
+      </div>
+    </section>
 
     <script>
       // UI wiring only — maps visual action buttons to the hidden game logic hooks
