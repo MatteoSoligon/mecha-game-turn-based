@@ -1,6 +1,10 @@
 /**
  * HAL-9K: the onboard tactical AI that narrates the battle log.
  * Pure presentation — quips never touch game state, they only comment on it.
+ * Combat actions pulse mecha sprites red for attacks, blue for parries and yellow for movement,
+ * and play a matching SVG sprite: a laser beam on attack, a blue aura shield on parry,
+ * and dust kicked up on movement.
+ * The battle screen behind the log is dressed with a terrain background image (Sand or Steel).
  */
 
 const CALLSIGN = "HAL-9K";

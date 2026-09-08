@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <!-- Attack: muzzle spark + beam, fired toward the opponent -->
+  <symbol id="fx-laser" viewBox="0 0 64 64">
+    <circle cx="6" cy="32" r="10" fill="#ffcf40" opacity="0.55"/>
+    <circle cx="6" cy="32" r="6" fill="#fff6cc"/>
+    <rect x="4" y="29" width="58" height="6" fill="#d24040"/>
+    <rect x="4" y="30" width="58" height="4" fill="#ff9a3d"/>
+    <rect x="4" y="31" width="58" height="2" fill="#fff6cc"/>
+  </symbol>
+
+  <!-- Parry: pulsing blue aura shield around the mecha -->
+  <symbol id="fx-shield" viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="30" fill="none" stroke="#00a0c8" stroke-width="3" opacity="0.5"/>
+    <circle cx="32" cy="32" r="24" fill="#00a0c8" opacity="0.18"/>
+    <circle cx="32" cy="32" r="18" fill="none" stroke="#bfe4ff" stroke-width="2" opacity="0.8"/>
+    <path d="M32 6 L52 16 V34 C52 46 43 56 32 60 C21 56 12 46 12 34 V16 Z" fill="none" stroke="#7cd0ff" stroke-width="2" opacity="0.7"/>
+  </symbol>
+
+  <!-- Move: dust puffs kicked up by footsteps -->
+  <symbol id="fx-dust" viewBox="0 0 64 32">
+    <circle cx="10" cy="24" r="7" fill="#c9b78c" opacity="0.7"/>
+    <circle cx="24" cy="20" r="9" fill="#d8c8a0" opacity="0.6"/>
+    <circle cx="40" cy="24" r="6" fill="#c9b78c" opacity="0.65"/>
+    <circle cx="52" cy="19" r="5" fill="#e0d3ac" opacity="0.5"/>
+  </symbol>
+</svg>

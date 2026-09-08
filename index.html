@@ -100,8 +100,9 @@
         100% { transform: translateY(0); }
       }
 
-      .sprite-blink-red  { animation: sprite-blink-red  280ms ease-in-out 2; }
-      .sprite-blink-blue { animation: sprite-blink-blue 280ms ease-in-out 2; }
+      .sprite-blink-red  { animation: sprite-blink-red  450ms ease-in-out 2; }
+      .sprite-blink-blue { animation: sprite-blink-blue 450ms ease-in-out 2; }
+      .sprite-blink-yellow { animation: sprite-blink-yellow 450ms ease-in-out 2; }
 
       @keyframes sprite-blink-red {
         0%, 100% { mix-blend-mode: normal; filter: none; }
@@ -111,6 +112,68 @@
       @keyframes sprite-blink-blue {
         0%, 100% { mix-blend-mode: normal; filter: none; }
         50%      { mix-blend-mode: screen; filter: sepia(1) saturate(6) hue-rotate(160deg) brightness(1.05); }
+      }
+
+      @keyframes sprite-blink-yellow {
+        0%, 100% { mix-blend-mode: normal; filter: none; }
+        50%      { mix-blend-mode: multiply; filter: sepia(1) saturate(8) hue-rotate(5deg) brightness(1.1); }
+      }
+
+      /* ── Action FX sprites (laser attack, aura shield, dust movement) ── */
+      .action-fx {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 4;
+      }
+
+      /* player2's sprite is mirrored, so its FX mount flips to fire the other way */
+      .action-fx.fx-flip { transform: scaleX(-1); }
+
+      .action-fx svg { position: absolute; display: block; }
+
+      .fx-laser {
+        top: 50%; left: 100%;
+        width: 64px; height: 64px;
+        transform: translate(-6px, -50%) scaleX(0.1);
+        transform-origin: left center;
+        opacity: 0;
+        animation: fx-laser 650ms ease-out forwards;
+      }
+
+      @keyframes fx-laser {
+        0%   { opacity: 0; transform: translate(-6px, -50%) scaleX(0.1); }
+        25%  { opacity: 1; transform: translate(-6px, -50%) scaleX(1); }
+        75%  { opacity: 1; transform: translate(-6px, -50%) scaleX(1); }
+        100% { opacity: 0; transform: translate(-6px, -50%) scaleX(1); }
+      }
+
+      .fx-shield {
+        top: 50%; left: 50%;
+        width: 110px; height: 110px;
+        transform: translate(-50%, -50%) scale(0.6);
+        opacity: 0;
+        animation: fx-shield 800ms ease-out forwards;
+      }
+
+      @keyframes fx-shield {
+        0%   { opacity: 0;   transform: translate(-50%, -50%) scale(0.6); }
+        40%  { opacity: 0.9; transform: translate(-50%, -50%) scale(1.05); }
+        100% { opacity: 0;   transform: translate(-50%, -50%) scale(1.15); }
+      }
+
+      .fx-dust {
+        bottom: 4px; left: 50%;
+        width: 70px; height: 36px;
+        transform: translate(-50%, 6px) scale(0.7);
+        opacity: 0;
+        animation: fx-dust 800ms ease-out forwards;
+      }
+
+      @keyframes fx-dust {
+        0%   { opacity: 0;   transform: translate(-50%, 6px) scale(0.7); }
+        30%  { opacity: 0.9; transform: translate(-65%, 0) scale(1); }
+        100% { opacity: 0;   transform: translate(-90%, -4px) scale(1.1); }
       }
 
       /* ── Robot HP/Energy bars (above sprites) ── */
@@ -133,7 +196,7 @@
       /* ── Effect pop ── */
       .effect-pop {
         position: absolute;
-        top: 0; left: 50%;
+        top: 50%; left: 100%;
         display: inline-flex;
         align-items: center;
         gap: 4px;
@@ -145,17 +208,30 @@
         white-space: nowrap;
         pointer-events: none;
         z-index: 5;
-        animation: effect-pop 900ms ease-out forwards;
+        animation: effect-pop 1400ms ease-out forwards;
       }
 
       .effect-pop.attack-icon { border-color: var(--red);    background: var(--red);    color: var(--white); }
       .effect-pop.move-icon   { border-color: var(--yellow); background: var(--yellow); color: var(--black); }
       .effect-pop.parry-icon  { border-color: var(--blue);   background: var(--blue);   color: var(--white); }
 
+      /* player1's badge exits on the opposite side, toward its own left */
+      .effect-pop.effect-pop--left {
+        left: auto;
+        right: 100%;
+        animation-name: effect-pop-left;
+      }
+
       @keyframes effect-pop {
-        0%   { opacity: 0; transform: translate(-50%, 12px) scale(0.8); }
-        20%  { opacity: 1; transform: translate(-50%, -6px) scale(1); }
-        100% { opacity: 0; transform: translate(-50%, -46px) scale(1); }
+        0%   { opacity: 0; transform: translate(6px, -50%)  scale(0.8); }
+        20%  { opacity: 1; transform: translate(10px, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(46px, -50%) scale(1); }
+      }
+
+      @keyframes effect-pop-left {
+        0%   { opacity: 0; transform: translate(-6px, -50%)  scale(0.8); }
+        20%  { opacity: 1; transform: translate(-10px, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-46px, -50%) scale(1); }
       }
 
       /* ── Floating bar delta ── */
@@ -166,7 +242,7 @@
         pointer-events: none;
         z-index: 50;
         transform: translateX(-50%);
-        animation: bar-delta-float 2200ms ease-out forwards;
+        animation: bar-delta-float 3200ms ease-out forwards;
       }
 
       .bar-delta[data-type="hp"]     { color: var(--red); }
@@ -611,6 +687,12 @@
       /* ── Screens ── */
       .screen { display: none; }
       .screen--active { display: block; }
+
+      #screen-battle {
+        background-size: contain;
+        background-position: top center;
+        background-repeat: no-repeat;
+      }
 
       body { padding-bottom: 40px; margin: 0; }
       body[data-screen="battle"] { padding-bottom: 130px; }

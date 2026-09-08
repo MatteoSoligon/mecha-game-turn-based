@@ -1,7 +1,7 @@
 import { Battle } from "./battle.js";
 import { EnergyBooster, RepairKit, Teleporter } from "./item.js";
 import { Robot } from "./robot.js";
-import { FloodedCity } from "./terrain.js";
+import { FloodedCity, Sand, Steel } from "./terrain.js";
 import { normalizeAction, resolveDirection } from "./actions.js";
 import { PASSIVE_EFFECTS_BY_KEY } from "./effects.js";
 import { runMiniGame } from "./minigame.js";
@@ -27,6 +27,17 @@ import { initBriefing, renderBriefing } from "./ui/briefing.js";
 import { initResults, renderResults } from "./ui/results.js";
 
 const PLAYER_ENERGY_STOCKS = { attack: 0.4, parry: 0.5, move: 0.1 };
+const ACTION_SPRITE_EFFECTS = {
+  attack: "sprite-blink-red",
+  parry: "sprite-blink-blue",
+  move: "sprite-blink-yellow",
+};
+// Symbols in images/action-effects.svg played over the sprite for each action.
+const ACTION_FX_SYMBOLS = {
+  attack: "fx-laser",
+  parry: "fx-shield",
+  move: "fx-dust",
+};
 
 /** Live battle state; rebuilt from scratch every time a mission is deployed. */
 const state = {
@@ -60,13 +71,49 @@ function showBarDelta(barEl, delta, type) {
 }
 
 function blinkSprite(sprite, effectClass) {
+  if (!sprite || !effectClass) {
+    return;
+  }
+
+  sprite.classList.remove(...Object.values(ACTION_SPRITE_EFFECTS));
+  void sprite.offsetWidth;
+  sprite.classList.add(effectClass);
+  sprite.addEventListener("animationend", () => sprite.classList.remove(effectClass), { once: true });
+}
+
+// Plays the laser/shield/dust SVG sprite over the mecha performing the action.
+function playActionEffect(sprite, actionType) {
+  console.log(`Preparing to play action effect: ${actionType} on sprite`, sprite);
+  const symbolId = ACTION_FX_SYMBOLS[actionType];
+  const host = sprite && sprite.parentElement;
+  if (!symbolId || !host) {
+    return;
+  }
+
+  const mount = document.createElement("div");
+  mount.className = "action-fx";
+  if (sprite === player2Sprite) {
+    mount.classList.add("fx-flip");
+  }
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add(symbolId);
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", `images/action-effects.svg#${symbolId}`);
+  svg.appendChild(use);
+  mount.appendChild(svg);
+  host.appendChild(mount);
+  mount.addEventListener("animationend", () => mount.remove(), { once: true });
+}
+
+// Clears leftover blink classes/FX mounts so a hidden screen can't replay last battle's action.
+function resetSpriteFx(sprite) {
   if (!sprite) {
     return;
   }
 
-  sprite.classList.remove("sprite-blink-red", "sprite-blink-blue");
-  void sprite.offsetWidth;
-  sprite.classList.add(effectClass);
+  sprite.classList.remove(...Object.values(ACTION_SPRITE_EFFECTS));
+  sprite.parentElement?.querySelectorAll(".action-fx").forEach((mount) => mount.remove());
 }
 
 function spriteForRobot(robot) {
@@ -94,6 +141,9 @@ function showEffectConsumed(robot, effectKey) {
 
   const badge = document.createElement("div");
   badge.className = `effect-pop ${effect.class}`;
+  if (sprite === player1Sprite) {
+    badge.classList.add("effect-pop--left");
+  }
 
   const icon = document.createElement("img");
   icon.src = effect.icon;
@@ -301,13 +351,18 @@ function startBattle(levelId) {
   state.levelId = levelId;
   state.robot1 = new Robot(buildLoadoutParts(), PLAYER_ENERGY_STOCKS, "player");
   state.robot2 = createEnemyForLevel(levelId);
-  state.battle = new Battle(new FloodedCity());
+  const TERRAINS = [FloodedCity, Sand, Steel];
+  const terrain = new TERRAINS[Math.floor(Math.random() * TERRAINS.length)]();
+  state.battle = new Battle(terrain);
   state.rounds = 0;
   state.finished = false;
   state.pendingLoser = null;
 
   state.battle.setupBattle(state.robot1, state.robot2);
-  battleScreen.style.background = state.battle.terrain.backgroundGradient;
+  document.body.style.backgroundColor = state.battle.terrain.themeColor || "";
+  battleScreen.style.backgroundImage = state.battle.terrain.image
+    ? `url("${state.battle.terrain.image}")`
+    : state.battle.terrain.backgroundGradient;
 
   battleMission.textContent =
     `Mission ${String(levelId).padStart(2, "0")} — ${level.title} vs ${state.robot2.name}`;
@@ -317,6 +372,8 @@ function startBattle(levelId) {
   speak(eventQuip("deploy"));
 
   fightBtn.disabled = false;
+  resetSpriteFx(player1Sprite);
+  resetSpriteFx(player2Sprite);
   player1Sprite.src = state.robot1.image || "images/player1.png";
   player2Sprite.src = state.robot2.image || "images/player2.png";
 
@@ -325,12 +382,18 @@ function startBattle(levelId) {
   showScreen("battle");
 }
 
+function resetBattleBackground() {
+  document.body.style.backgroundColor = "";
+  battleScreen.style.backgroundImage = "";
+}
+
 function endBattle(victory) {
   if (state.finished) {
     return;
   }
   state.finished = true;
   fightBtn.disabled = true;
+  resetBattleBackground();
   speak(eventQuip(victory ? "victory" : "defeat"));
 
   const { levelId, robot1, rounds } = state;
@@ -403,22 +466,11 @@ fightBtn.addEventListener("click", async function () {
   );
 
   state.rounds += 1;
-
-  if (robot1.currentHP < robot1HpBefore) {
-    blinkSprite(player1Sprite, "sprite-blink-red");
-  }
-
-  if (robot2.currentHP < robot2HpBefore) {
-    blinkSprite(player2Sprite, "sprite-blink-red");
-  }
-
-  if (normalizedAction1 === "parry" && winner === "Robot 1 wins!") {
-    blinkSprite(player1Sprite, "sprite-blink-blue");
-  }
-
-  if (normalizedAction2 === "parry" && winner === "Robot 2 wins!") {
-    blinkSprite(player2Sprite, "sprite-blink-blue");
-  }
+  console.log(`Round ${state.rounds} resolved. Winner: ${winner || "None"}`);
+  blinkSprite(player1Sprite, ACTION_SPRITE_EFFECTS[normalizedAction1]);
+  blinkSprite(player2Sprite, ACTION_SPRITE_EFFECTS[normalizedAction2]);
+  playActionEffect(player1Sprite, normalizedAction1);
+  playActionEffect(player2Sprite, normalizedAction2);
 
   renderStats();
   renderPassiveEffectsWorkshop(robot1PassiveEffects, robot1);
@@ -474,6 +526,7 @@ retreatBtn.addEventListener("click", function () {
     return;
   }
   state.finished = true;
+  resetBattleBackground();
   showScreen("quests");
 });
 
@@ -497,7 +550,7 @@ window.addEventListener(Robot.EFFECT_CONSUMED_EVENT, (event) => {
  * Boot
  * ------------------------------------------------------------------------- */
 
-const goToQuests = () => showScreen("quests");
+const goToQuests = () => {resetBattleBackground(); showScreen("quests")};
 
 initTopBar({ onNavigateQuests: goToQuests });
 initQuests({ onSelect: (levelId) => showScreen("briefing", levelId) });

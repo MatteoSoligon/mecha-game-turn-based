@@ -241,13 +241,13 @@ export class Robot {
     }
 
     const requested = Number(baseCost) * repetitionMalus;
-    const clamped = Math.max(0, Math.min(this.globalEnergy, requested));
-    if (clamped < requested) {
-      //console.log(`Not enough ${action} energy for this action.`);
+    if (this.globalEnergy < requested) {
+      this.globalEnergy = 0;
+      this.surrenderForEnergy();
       return;
     }
 
-    this.globalEnergy -= clamped;
+    this.globalEnergy -= requested;
   }
 }
 
